@@ -1,0 +1,53 @@
+version: '3'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9 # 자바11 버전의 지원 엘라스틱 서치 버전
+    volumes:
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml # 엘라스틱 서치 설정 파일
+      - elasticsearch:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+    environment:
+      node.name: elasticsearch
+      ES_JAVA_OPTS: -Xms512m -Xmx512m # 메모리 설정
+      discovery.type: single-node
+    networks:
+      - elk
+    restart: unless-stopped # 부팅시 자동으로 컨테이너 재시작
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.17.9
+    volumes:
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+      - ./jar/mysql-connector-j-8.0.32.jar:/usr/share/logstash/logstash-core/lib/jars/mysql-connector-j-8.0.32.jar
+    ports:
+      - 5044:5044
+      - 9600:9600
+    environment:
+      LS_JAVA_OPTS: -Xms256m -Xmx256m
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+    #restart: unless-stopped
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.9
+    volumes:
+      - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
+    ports:
+      - 5601:5601
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+
+networks:
+  elk:
+
+volumes:
+  elasticsearch:
